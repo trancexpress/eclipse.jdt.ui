@@ -22,6 +22,9 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.osgi.framework.Bundle;
 
@@ -67,6 +70,7 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchSite;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
@@ -138,6 +142,8 @@ import org.eclipse.jdt.internal.ui.viewsupport.JavaElementLinks;
  * @since 2.1
  */
 public class JavadocHover extends AbstractJavaEditorTextHover {
+
+	private static final Map<IWorkbenchWindow, IInformationControlCreator> INFO_CONTROL_CREATORS = Collections.synchronizedMap(new ConcurrentHashMap<>());
 
 	public static final String CONSTANT_VALUE_SEPARATOR= " : "; //$NON-NLS-1$
 
@@ -421,16 +427,7 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 		public IInformationControl doCreateInformationControl(Shell parent) {
 			String tooltipAffordanceString= fAdditionalInfoAffordance ? JavaPlugin.getAdditionalInfoAffordanceString() : EditorsUI.getTooltipAffordanceString();
 			if (BrowserInformationControl.isAvailable(parent)) {
-				String font= PreferenceConstants.APPEARANCE_JAVADOC_FONT;
-				iControl= new BrowserInformationControl(parent, font, tooltipAffordanceString) {
-					/*
-					 * @see org.eclipse.jface.text.IInformationControlExtension5#getInformationPresenterControlCreator()
-					 */
-					@Override
-					public IInformationControlCreator getInformationPresenterControlCreator() {
-						return fInformationPresenterControlCreator;
-					}
-				};
+				iControl= (BrowserInformationControl) fInformationPresenterControlCreator.createInformationControl(parent);
 
 				JFaceResources.getColorRegistry().addListener(this); // So propertyChange() method is triggered in context of IPropertyChangeListener
 				setHoverColors();
@@ -523,7 +520,7 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 	@Override
 	public IInformationControlCreator getInformationPresenterControlCreator() {
 		if (fPresenterControlCreator == null)
-			fPresenterControlCreator= new PresenterControlCreator(getSite());
+			fPresenterControlCreator= getInformationPresenterControlCreator(getSite());
 		return fPresenterControlCreator;
 	}
 
@@ -1358,5 +1355,9 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 		return null;
 	}
 
-
+	private static IInformationControlCreator getInformationPresenterControlCreator(IWorkbenchSite site) {
+		IWorkbenchWindow window= site.getWorkbenchWindow();
+		IInformationControlCreator creator= INFO_CONTROL_CREATORS.computeIfAbsent(window, w -> new PresenterControlCreator(site));
+		return creator;
+	}
 }
