@@ -47,6 +47,7 @@ import org.eclipse.jface.internal.text.html.BrowserInformationControlInput;
 import org.eclipse.jface.internal.text.html.BrowserInput;
 import org.eclipse.jface.internal.text.html.HTMLPrinter;
 import org.eclipse.jface.internal.text.html.HTMLTextPresenter;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -66,6 +67,7 @@ import org.eclipse.jface.text.TextPresentation;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchPreferenceConstants;
 import org.eclipse.ui.IWorkbenchSite;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -327,6 +329,7 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 				ToolBarManager tbm= new ToolBarManager(SWT.FLAT);
 				String font= PreferenceConstants.APPEARANCE_JAVADOC_FONT;
 				BrowserInformationControl iControl= new BrowserInformationControl(parent, font, tbm);
+				setDisposeTimeout(iControl);
 
 				final BackAction backAction= new BackAction(iControl);
 				backAction.setEnabled(false);
@@ -431,6 +434,7 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 						return fInformationPresenterControlCreator;
 					}
 				};
+				setDisposeTimeout(iControl);
 
 				JFaceResources.getColorRegistry().addListener(this); // So propertyChange() method is triggered in context of IPropertyChangeListener
 				setHoverColors();
@@ -1358,5 +1362,11 @@ public class JavadocHover extends AbstractJavaEditorTextHover {
 		return null;
 	}
 
-
+	private static void setDisposeTimeout(BrowserInformationControl browserInformationControl) {
+		IPreferenceStore store= PlatformUI.getPreferenceStore();
+		int timeout= store.getInt(IWorkbenchPreferenceConstants.DISPOSE_CLOSED_BROWSER_HOVER_TIMEOUT);
+		if (timeout > 0) {
+			browserInformationControl.setDisposeTimeout(5_000);
+		}
+	}
 }
