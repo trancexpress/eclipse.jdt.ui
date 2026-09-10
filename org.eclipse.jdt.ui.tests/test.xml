@@ -27,7 +27,7 @@
     <property name="jdt-folder" 
               value="${eclipse-home}/jdt_folder"/>
     <delete dir="${jdt-folder}" quiet="true"/>
-   	<condition property="os.isWindows">
+  	<condition property="os.isWindows">
     	<os family="windows"/>
   	</condition>
 
