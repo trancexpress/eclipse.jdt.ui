@@ -9,8 +9,7 @@
   <property name="plugin-name" value="org.eclipse.jdt.ui.tests"/>
   <property name="library-file"
             value="${eclipse-home}/plugins/org.eclipse.test/library.xml"/>
-
-  <property file="${basedir}/target/vmarguments.properties"/>
+  <property name="leak-test-vmargs-file" value="${eclipse-home}/jdt-ui-leak-test-vmargs"/>
 
   <!-- This target holds all initialization code that needs to be done for -->
   <!-- all tests that are to be run. Initialization for individual tests -->
@@ -28,7 +27,7 @@
     <property name="jdt-folder" 
               value="${eclipse-home}/jdt_folder"/>
     <delete dir="${jdt-folder}" quiet="true"/>
-   	<condition property="os.isWindows">
+  	<condition property="os.isWindows">
     	<os family="windows"/>
   	</condition>
 
@@ -41,9 +40,31 @@
     </ant>
     
   </target>
+
+  <target name="generate-leak-test-vmargs">
+    <condition property="leak-test-jvm" value="${jvm}" else="${java.home}/bin/java">
+      <isset property="jvm"/>
+    </condition>
+    <path id="leak-test-generator-classpath">
+      <dirset dir="${eclipse-home}/plugins">
+        <include name="${plugin-name}_*"/>
+      </dirset>
+      <fileset dir="${eclipse-home}/plugins">
+        <include name="${plugin-name}_*.jar"/>
+      </fileset>
+    </path>
+    <echo message="Generating leak-test VM arguments with ${leak-test-jvm}"/>
+    <java classname="org.eclipse.jdt.ui.leaktest.generator.GenerateLeakTestVmArguments"
+          fork="true"
+          jvm="${leak-test-jvm}"
+          failonerror="true">
+      <classpath refid="leak-test-generator-classpath"/>
+      <arg path="${leak-test-vmargs-file}"/>
+    </java>
+  </target>
   
     <!-- leak test target -->
-  <target name="leaksuite">
+  <target name="leaksuite" depends="generate-leak-test-vmargs">
     <property name="jdt-folder" value="${eclipse-home}/jdt_folder"/>
 
     <delete dir="${jdt-folder}" quiet="true"/>
@@ -52,7 +73,7 @@
       <property name="data-dir" value="${jdt-folder}"/>
       <property name="plugin-name" value="${plugin-name}"/>
       <property name="classname" value="org.eclipse.jdt.ui.tests.LeakTestSuite"/>
-      <property name="vmargs" value="${javavmargs}" />
+      <property name="vmargs" value="&quot;@${leak-test-vmargs-file}&quot;" />
     </ant>
   </target>
   
@@ -60,7 +81,7 @@
   <!-- after all of the tests have been run. You can use this target to -->
   <!-- delete temporary files that have been created. -->
   <target name="cleanup">
-
+    <delete file="${leak-test-vmargs-file}" quiet="true"/>
   </target>
 
   <!-- This target runs the test suite. Any actions that need to happen -->
